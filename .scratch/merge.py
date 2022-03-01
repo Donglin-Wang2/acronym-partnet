@@ -35,6 +35,6 @@ for id in acronym_ids:
         category_count[partnet_id_to_cat[id]] += 1
         
 print(category_count)
-print(categories_to_ids["Mug"][1])
-print(id_to_anno[categories_to_ids["Mug"][1]])
-print(acronym_id_to_scale[categories_to_ids["Mug"][1]])
+print(categories_to_ids["Chair"][1])
+print(id_to_anno[categories_to_ids["Chair"][1]])
+print(acronym_id_to_scale[categories_to_ids["Chair"][1]])

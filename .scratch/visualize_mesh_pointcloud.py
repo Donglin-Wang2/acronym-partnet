@@ -9,6 +9,7 @@ POINT_ID = "8745"
 # MESH_SCALE = 0.015551998509716471
 # MESH_PATH = f'/home/donglin/Data/acronym/meshes/Mug/{MESH_ID}.obj'
 POINT_PATH = f'/home/donglin/Data/data_v0/{POINT_ID}/point_sample/sample-points-all-pts-label-10000.ply'
+POINT_PATH = f'/home/donglin/Data/data_v0/{POINT_ID}/point_sample/pts-10000.txt'
 SHAPNET_MESH_PATH = '/home/donglin/Data/ShapeNetCore.v2/03797390/7223820f07fd6b55e453535335057818/models/model_normalized.obj'
 
 p.connect(p.GUI)
@@ -33,7 +34,7 @@ def load_point(position):
 pts = []
 with open(POINT_PATH, 'r') as pts_f:
     tokens = pts_f.readlines()
-    for token in tokens[10:]:
+    for token in tokens:
         pts.append([float(ele) for ele in token.split()[:3]])
 pts = np.array(pts)
 # pts[:, [1,2]] = pts[:, [2,1]]
