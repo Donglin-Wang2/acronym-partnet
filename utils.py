@@ -167,7 +167,7 @@ def get_acronym_grasp_path(shapenet_id):
     shapenet_to_acronym = pickle.load(open(SHAPENET_TO_ACRONYM_PATH, 'rb'))
     return shapenet_to_acronym[shapenet_id]
 
-
+# DONE 
 def get_shapenetv1_model_path(shapenet_id):
     shapenet_to_cat_id = pickle.load(open(SHAPENET_TO_CAT_ID_PATH, 'rb'))
     shapenet_cat_id = shapenet_to_cat_id[shapenet_id]
@@ -439,7 +439,9 @@ def so3_to_se3(so3):
 
 if __name__ == '__main__':
     produce_shapenet_to_acronym_scale_map()
+    #DONE
     produce_partnet_map()
+    #DONE
     produce_id_to_cat_map()
     produce_shapenetsem_stat()
     produce_shapenetv2_stat()

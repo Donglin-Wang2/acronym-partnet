@@ -1,0 +1,6 @@
+{
+    "shapenetv1_root": "/home/donglin/Data/ShapeNetCore.v1",
+    "shapenetv2_root": "/home/donglin/Data/ShapeNetCore.v2",
+    "partnet_root": "/home/donglin/Data/data_v0",
+    "partnet_metadata": "/home/donglin/Github/partnet_dataset/stats/all_valid_anno_info.txt"
+}
