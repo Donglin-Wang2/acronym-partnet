@@ -1,8 +1,8 @@
+import enum
 import os
 import csv
 import json
 import pickle
-from cv2 import threshold
 
 import numpy as np
 import open3d as o3d
@@ -49,6 +49,10 @@ SHAPENETV1_TO_TRANSMAT_PATH = os.path.join(
     MAPPING_DIR, 'shapenetv1_to_transmat' + PICKLE_EXT)
 SHAPENET_TO_ACRONYM_PATH = os.path.join(
     MAPPING_DIR, 'shapenet_to_acronym' + PICKLE_EXT)
+SHAPENET_PARTNET_JOINT_IDS_PATH = os.path.join(
+    MAPPING_DIR, 'joint_ids' + PICKLE_EXT
+)
+CAT_TO_IDS_PATH = os.path.join(MAPPING_DIR, 'cat_to_ids' + PICKLE_EXT)
 
 
 # Path templates
@@ -60,6 +64,8 @@ SHAPENETSEM_MODEL_PATH_TEMPLATE = '/home/donglin/Data/ShapeNetSem.v0/models-OBJ/
 
 shapenet_ids = set()
 anno_ids = set()
+acronym_ids = set()
+shapenet_partnet_joint_ids = set()
 shapenet_to_cat_name = {}
 shapenet_to_cat_id = {}
 shapenet_to_anno = {}
@@ -81,6 +87,24 @@ def produce_shapenet_to_acronym_scale_map():
             shapenet_to_acronym_scale[id] = float(tokens[-1][:-3])
     pickle.dump(shapenet_to_acronym_scale, open(
         SHAPENET_TO_ACRONYM_SCALE_PATH, 'wb'))
+
+
+def produce_partnet_shapenet_joint_ids():
+    joint_ids = []
+    acronym_file_list = os.listdir(ACRONYM_MODEL_PATH)
+    acronym_ids = set()
+    for filename in acronym_file_list:
+        tokens = filename.split("_")
+        id = tokens[1]
+        if len(filename) >= 28:
+            acronym_ids.add(id)
+    with open(PARTNET_META_PATH, 'r') as file_obj:
+        for line in file_obj.readlines():
+            tokens = line.split(" ")
+            shapenet_id = tokens[3]
+            if shapenet_id in acronym_ids:
+                joint_ids.append(shapenet_id)
+    pickle.dump(joint_ids, open(SHAPENET_PARTNET_JOINT_IDS_PATH, 'wb'))
 
 
 def produce_partnet_map():
@@ -161,6 +185,10 @@ def get_category_count():
             joint_category_count[shapenet_to_cat_name[id]] = joint_category_count.get(
                 shapenet_to_cat_name[id], 0) + 1
     return joint_category_count
+
+
+def get_shapenet_partnet_joint_ids():
+    return pickle.load(open(SHAPENET_PARTNET_JOINT_IDS_PATH, 'rb'))
 
 
 def get_acronym_grasp_path(shapenet_id):
@@ -303,7 +331,7 @@ def load_obj(fn):
         elif line.startswith('f '):
             faces.append(np.int32([item.split('/')[0]
                          for item in line.split()[1:4]]))
-    return np.vstack(vertices), np.vstack(faces)
+    return np.vstack(vertices), np.vstack(faces) - 1
 
 
 def get_partnet_combined_vertices_and_faces(shapenet_id):
@@ -320,7 +348,7 @@ def get_partnet_combined_vertices_and_faces(shapenet_id):
             fs.append(cur_fs + vid)
             vid += cur_vs.shape[0]
     v_arr = np.concatenate(vs, axis=0)
-    f_arr = np.concatenate(fs, axis=0) - 1
+    f_arr = np.concatenate(fs, axis=0)
     tmp = np.array(v_arr[:, 0], dtype=np.float32)
     # v_arr[:, 0] = v_arr[:, 2]
     # v_arr[:, 2] = -tmp
@@ -355,6 +383,10 @@ def get_mesh_from_verices_and_faces(vertices, faces):
         vertices), o3d.utility.Vector3iVector(faces)
     return o3d.geometry.TriangleMesh(vertices, faces)
 
+def get_partnet_normalize_transmat(shapenet_id):
+    vertices, faces = get_partnet_combined_vertices_and_faces(shapenet_id)
+    transmat = get_transmat_from_vertices(vertices)
+    return transmat
 
 def get_normalized_partnet_mesh(shapenet_id):
     # EXPERIMENTAL
@@ -428,6 +460,41 @@ def get_partnet_icp2(shapenet_id):
     return partnet_mesh.transform(partnet_to_shapenetv1.transformation)
 
 
+def prune_mesh(mesh):
+    return mesh.merge_close_vertices(
+        1e-4).remove_duplicated_triangles().remove_degenerate_triangles().compute_vertex_normals()
+
+
+def get_icp_between(mesh1, mesh2, threshold=1, trans_init=np.eye(4)):
+    mesh1 = prune_mesh(mesh1)
+    mesh2 = prune_mesh(mesh2)
+    vts1 = o3d.geometry.PointCloud(mesh1.vertices)
+    vts2 = o3d.geometry.PointCloud(mesh2.vertices)
+    print(np.asarray(mesh1.vertices).shape, np.asarray(mesh1.vertex_normals).shape)
+    vts1.normals = mesh1.vertex_normals
+    vts2.normals = mesh2.vertex_normals
+    loss = o3d.pipelines.registration.TukeyLoss(k=0.1)
+    mesh1_to_mesh2 = o3d.pipelines.registration.registration_icp(
+        vts1, vts2, threshold, trans_init,
+        o3d.pipelines.registration.TransformationEstimationPointToPlane(loss),
+        o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=200000))
+    return mesh1_to_mesh2.transformation
+
+
+def get_icp_between_rand_pnts(mesh1, mesh2, threshold=1, trans_init=np.eye(4)):
+    mesh1 = prune_mesh(mesh1)
+    mesh2 = prune_mesh(mesh2)
+    pnts1 = mesh1.sample_points_uniformly(
+        number_of_points=200000, use_triangle_normal=True)
+    pnts2 = mesh2.sample_points_uniformly(
+        number_of_points=200000, use_triangle_normal=True)
+    loss = o3d.pipelines.registration.TukeyLoss(k=0.1)
+    mesh1_to_mesh2 = o3d.pipelines.registration.registration_icp(
+        pnts1, pnts2, threshold, trans_init,
+        o3d.pipelines.registration.TransformationEstimationPointToPlane(loss),
+        o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=200000))
+    return mesh1_to_mesh2.transformation
+
 def so3_to_se3(so3):
     se3 = np.concatenate(
         [so3, np.zeros((so3.shape[0], 1), dtype=np.float32)], axis=1)
@@ -437,10 +504,80 @@ def so3_to_se3(so3):
     return se3
 
 
+def get_normalized_shapenetsem_mesh(shapenet_id):
+    path = SHAPENETSEM_MODEL_PATH_TEMPLATE.format(shapenet_id=shapenet_id)
+    vertices, faces = load_obj(path)
+    # transmat = get_transmat_from_vertices(vertices)
+    # vertices = np.concatenate(
+    #     [vertices, np.ones((vertices.shape[0], 1), dtype=np.float32)], axis=1)
+    # vertices = vertices @ transmat.T
+    # vertices = vertices[:, :3]
+    vertices = normalize_pointcloud(vertices)
+    mesh = get_mesh_from_verices_and_faces(vertices, faces)
+    return mesh
+
+
+def get_partnet_acronym_transform(shapenet_id):
+    partnet_mesh = get_normalized_partnet_mesh2(shapenet_id)
+    acronym_mesh = get_normalized_shapenetsem_mesh(shapenet_id)
+    shapenetv2_mesh = o3d.io.read_triangle_mesh(
+        get_shapenetv2_model_path(shapenet_id))
+    acronym_mesh.paint_uniform_color([0, 0, 1])
+    shapenetv2_mesh.paint_uniform_color([0, 1, 0])
+    o3d.visualization.draw_geometries(
+        [partnet_mesh, acronym_mesh, shapenetv2_mesh, o3d.geometry.TriangleMesh.create_coordinate_frame()])
+
+
+def get_shapenetsem_stat():
+    return pickle.load(open(SHAPENET_TO_SEM_STAT_PATH, 'rb'))
+
+
+def get_shapenetsem_axis_alignment(shapenet_id):
+    stats = get_shapenetsem_stat()[shapenet_id]
+    up, front = stats['up'], stats['front']
+    return axis_to_so3(up, front)
+
+
+def axis_to_so3(up, front):
+    # transmat = np.eye(3)
+    # for i, ele in enumerate(axis):
+    #     if ele == 1.0 or ele == -1.0:
+    #         if target=="front":
+    #             transmat[:, [0, i]] = transmat[:, [i, 0]]
+    #             transmat[:, 0] = transmat[:, 0] * ele
+    #         else:
+    #             transmat[:,[-1, i]] = transmat[:, [i, -1]]
+    #             transmat[:, -1] = transmat[:, -1] * ele
+    # return transmat
+
+    transmat = np.eye(3)
+
+    up = np.array(up)  # shape is (3,)
+    front = np.array(front)
+    rear = np.cross(up, front)
+    transmat[:, 0] = front
+    transmat[:, 1] = rear
+    transmat[:, 2] = up
+    return np.linalg.inv(transmat)
+
+def produce_cat_to_ids():
+    cat_to_ids = {}
+    shapenet_to_cat_name = pickle.load(open(SHAPENET_TO_CAT_NAME_PATH, 'rb'))
+    shapenet_to_anno = pickle.load(open(SHAPENET_TO_ANNO_PATH, 'rb'))
+    for shapenet_id in get_shapenet_partnet_joint_ids():
+        cat_name = shapenet_to_cat_name[shapenet_id]
+        cat_to_ids[cat_name] = cat_to_ids.get(cat_name, []) + [{
+            'shapenet_id': shapenet_id,
+            'anno_id': shapenet_to_anno[shapenet_id]
+        }]
+    pickle.dump(cat_to_ids, open(CAT_TO_IDS_PATH, 'wb'))
+
 if __name__ == '__main__':
-    produce_shapenet_to_acronym_scale_map()
-    produce_partnet_map()
-    produce_id_to_cat_map()
-    produce_shapenetsem_stat()
-    produce_shapenetv2_stat()
-    produce_anno_id_to_transmat()
+    # produce_shapenet_to_acronym_scale_map()
+    # produce_partnet_map()
+    # produce_id_to_cat_map()
+    # produce_shapenetsem_stat()
+    # produce_shapenetv2_stat()
+    # produce_anno_id_to_transmat()
+    # produce_partnet_shapenet_joint_ids()
+    produce_cat_to_ids()

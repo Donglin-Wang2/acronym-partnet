@@ -106,10 +106,53 @@ def visualize2(shapenet_id):
     partnet_mesh.paint_uniform_color([0, 0, 1])
     o3d.visualization.draw_geometries([partnet_mesh, shapenetv2_mesh])
 
+def test_shapenetsem_visual():
+    mesh1 = get_normalized_shapenetsem_mesh(SHAPENET_ID)
+    o3d.visualization.draw_geometries(
+        [mesh1,  o3d.geometry.TriangleMesh.create_coordinate_frame()])
 
-test_icp_robustness(SHAPENET_ID)
+def test_shapenetsem_partnet_alignment_vts():
+    # id2 = '6cb3d99b20e7fbb5b04cb542e2c50eb4'
+    # id2 = '6bd7475753c3d1d62764cfba57a5de73'
+    # id2 = '665bfb42a0362f71d577f4b88a77dd38'
+    sem_mesh = get_normalized_shapenetsem_mesh(SHAPENET_ID)
+    partnet_mesh = get_normalized_partnet_mesh(SHAPENET_ID).paint_uniform_color([0, 0, 1])
+    partnet_to_acro_rot = R.from_rotvec([90, 0, 0], degrees=True).as_matrix()
+    transmat1 = get_shapenetsem_axis_alignment(SHAPENET_ID)
+    sem_mesh.rotate(transmat1)
+    partnet_mesh.rotate(partnet_to_acro_rot)
+    sem_to_partnet = get_icp_between(sem_mesh, partnet_mesh)
+    sem_mesh.transform(sem_to_partnet)
+    calc_max_distance(sem_mesh, partnet_mesh)
+    # o3d.visualization.draw_geometries(
+    #     [sem_mesh, partnet_mesh, o3d.geometry.TriangleMesh.create_coordinate_frame()])
+
+def test_shapenetsem_partnet_alignment_rand_pnts():
+    sem_mesh = get_normalized_shapenetsem_mesh(SHAPENET_ID)
+    partnet_mesh = get_normalized_partnet_mesh(SHAPENET_ID).paint_uniform_color([0, 0, 1])
+    partnet_to_acro_rot = R.from_rotvec([90, 0, 0], degrees=True).as_matrix()
+    transmat1 = get_shapenetsem_axis_alignment(SHAPENET_ID)
+    sem_mesh.rotate(transmat1)
+    partnet_mesh.rotate(partnet_to_acro_rot)
+    sem_to_partnet = get_icp_between_rand_pnts(sem_mesh, partnet_mesh)
+    sem_mesh.transform(sem_to_partnet)
+    calc_max_distance(sem_mesh, partnet_mesh)
+
+def calc_max_distance(source_mesh, target_mesh):
+    scene = o3d.t.geometry.RaycastingScene()
+    target_mesh = o3d.t.geometry.TriangleMesh.from_legacy(target_mesh)
+    source_points = source_mesh.sample_points_uniformly(20000)
+    source_points = o3d.core.Tensor(np.array(source_points.points), dtype=o3d.core.Dtype.Float32)
+    scene.add_triangles(target_mesh)
+    print(np.abs(scene.compute_distance(source_points).numpy()).max())
+    
+
+# test_shapenetsem_visual()
+test_shapenetsem_partnet_alignment_vts()
+test_shapenetsem_partnet_alignment_rand_pnts()
+# test_icp_robustness(SHAPENET_ID)
 # test_dist_calc(SHAPENET_ID)
-visualize_icp(SHAPENET_ID)
+# visualize_icp(SHAPENET_ID)
 # visualize_partnet_comb_and_v1(SHAPENET_ID)
 # test_align(SHAPENET_ID)
 # test_pos_align(SHAPENET_ID)
