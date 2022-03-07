@@ -38,12 +38,13 @@ for k, v in pickle.load(open('./mappings/cat_to_ids.pickle', 'rb')).items():
         sampled_points = []
         normalize_transmat = get_partnet_normalize_transmat(shapenet_id)
         rotation = R.from_rotvec([90, 0, 0], degrees=True).as_matrix()
-
+        # icp_mat = get_icp_between()
+        print(rotation)
         if 'children' not in hier:
             break
         for child in hier['children']:
             file_list = [f'/home/donglin/Data/data_v0/{anno_id}/objs/{name}.obj' for name in child['objs']]
-            part_mesh = combine_meshes(file_list).rotate(rotation).transform(normalize_transmat).paint_uniform_color([0,0,1])
+            part_mesh = combine_meshes(file_list).transform(normalize_transmat).transform(so3_to_se3(rotation)).paint_uniform_color([0,0,1])
             part_meshes.append(part_mesh)
             part_surface_area = part_mesh.get_surface_area()
             total_surface_area += part_surface_area
@@ -68,8 +69,17 @@ for k, v in pickle.load(open('./mappings/cat_to_ids.pickle', 'rb')).items():
 
 points = points[0]
 # pcs = [o3d.geometry.PointCloud(pts) for pts in points]
-pcs = part_meshes
+
+# pcs.append(get_normalized_partnet_mesh(SHAPENET_ID).transform(so3_to_se3(rotation)).paint_uniform_color([0,1,0]))
 print(len(points))
-mesh = get_normalized_partnet_mesh(SHAPENET_ID).rotate(R.from_rotvec([90, 0, 0], degrees=True).as_matrix())
+mesh = get_normalized_partnet_mesh(SHAPENET_ID).transform(so3_to_se3(rotation))
+sem_to_partnet = get_sem_to_partnet_transform(SHAPENET_ID, mesh)
+pcs = part_meshes
+# pcs = [part.transform(partnet_to_sem_transmat) for part in part_meshes]
+sem_transmat = get_shapenetsem_axis_alignment(shapenet_id)
+shapenet_sem_mesh = get_normalized_shapenetsem_mesh(shapenet_id).transform(so3_to_se3(sem_transmat)).transform(sem_to_partnet).paint_uniform_color([0,1,0])
+
+# pcs.append(mesh.transform(partnet_to_sem_transmat))
 pcs.append(mesh)
+pcs.append(shapenet_sem_mesh)
 o3d.visualization.draw_geometries(pcs)

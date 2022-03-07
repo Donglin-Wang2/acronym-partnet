@@ -480,6 +480,18 @@ def get_icp_between(mesh1, mesh2, threshold=1, trans_init=np.eye(4)):
         o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=200000))
     return mesh1_to_mesh2.transformation
 
+def get_partnet_to_sem_transform(shapenet_id, partnet_mesh):
+    sem_mesh = get_normalized_shapenetsem_mesh(shapenet_id)
+    transmat1 = get_shapenetsem_axis_alignment(shapenet_id)
+    sem_mesh.transform(so3_to_se3(transmat1))
+    return get_icp_between(partnet_mesh, sem_mesh)
+
+def get_sem_to_partnet_transform(shapenet_id, partnet_mesh):
+    sem_mesh = get_normalized_shapenetsem_mesh(shapenet_id)
+    transmat1 = get_shapenetsem_axis_alignment(shapenet_id)
+    sem_mesh.transform(so3_to_se3(transmat1))
+    return get_icp_between(sem_mesh, partnet_mesh)
+
 
 def get_icp_between_rand_pnts(mesh1, mesh2, threshold=1, trans_init=np.eye(4)):
     mesh1 = prune_mesh(mesh1)
