@@ -1,0 +1,1 @@
+'Chair': 343, 'Table': 338, 'StorageFurniture': 205, 'Lamp': 194, 'Display': 131, 'Vase': 117, 'Mug': 84, 'Bottle': 82, 'Laptop': 74, 'Clock': 64, 'TrashCan': 44, 'Bowl': 40, 'Knife': 38, 'Bag': 29, 'Keyboard': 23, 'Earphone': 22, 'Microwave': 18, 'Bed': 17, 'Hat': 16, 'Faucet': 14, 'Refrigerator': 8, 'Scissors': 5
