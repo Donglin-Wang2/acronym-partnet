@@ -102,15 +102,17 @@ for line in tqdm(partnet_file.readlines()):
         pickle.dump(shape_part_label_mapping, open(f'./data/shape_part_label_map_{sampled_count}.pickle', 'wb'))
         points, pnt_label_list, shape_label_list, shape_part_count = [], [], [], []
 
-# print(shape_part_label_mapping)
-# print(np.array(points).shape)
-# print(np.array(shape_part_count).shape, shape_part_count)
-# print(np.array(pnt_label_list).shape)
-# print(np.array(shape_label_list))
+np.save(f'./data/points_{sampled_count}', np.array(points))
+np.save(f'./data/point_labels_{sampled_count}', np.array(pnt_label_list))
+np.save(f'./data/shape_labels_{sampled_count}', np.array(shape_label_list))
+np.save(f'./data/shape_part_count_{sampled_count}', np.array(shape_part_count))
+pickle.dump(shape_part_label_mapping, open(f'./data/shape_part_label_map_{sampled_count}.pickle', 'wb'))
 
-# np.save(f'./data/points_{sampled_count}', np.array(points))
-# np.save(f'./data/point_labels_{sampled_count}', np.array(pnt_label_list))
-# np.save(f'./data/shape_labels_{sampled_count}', np.array(shape_label_list))
+print(shape_part_label_mapping)
+print(np.array(points).shape)
+print(np.array(shape_part_count).shape, shape_part_count)
+print(np.array(pnt_label_list).shape)
+print(np.array(shape_label_list))
     
 
 end = time.time()
@@ -119,7 +121,7 @@ end = time.time()
 # mesh = get_normalized_partnet_mesh(SHAPENET_ID).transform(so3_to_se3(rotation))
 # print("Here1")
 # sem_to_partnet = get_sem_to_partnet_transform(SHAPENET_ID, mesh)
-# print("Here 2")
+# print("Here 2")shapenetcore_partanno_v0
 # sem_transmat = get_shapenetsem_axis_alignment(SHAPENET_ID)
 # print("Here 3")
 # shapenet_sem_mesh = get_normalized_shapenetsem_mesh(SHAPENET_ID).transform(so3_to_se3(sem_transmat)).transform(sem_to_partnet).paint_uniform_color([0,1,0])

@@ -1,0 +1,25 @@
+# Json Schema
+
+- Shapnet ID
+- Shapenet Cat ID
+- Shapenet Cat Name
+- Anno ID
+- Shapenet 1 Path
+- Shapenet 1 Meta
+- Shapenet 2 Path
+- Shapenet 2 Meta
+- ShapenetSem Path
+- ShapenetSem Meta
+- Partnet Path
+- v1 to v2
+- v1 to v2 norm
+- v1 to v2 align
+- v1 to v2 loss
+- sem to v2
+- sem to v2 norm
+- sem to v2 align
+- sem to v2 loss
+- partnet to v2
+- partnet to v2 norm
+- partnet to v2 align
+- partnet to v2 loss

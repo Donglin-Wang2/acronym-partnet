@@ -477,7 +477,7 @@ def get_icp_between(mesh1, mesh2, threshold=1, trans_init=np.eye(4)):
     mesh1_to_mesh2 = o3d.pipelines.registration.registration_icp(
         vts1, vts2, threshold, trans_init,
         o3d.pipelines.registration.TransformationEstimationPointToPlane(loss),
-        o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=200000))
+        o3d.pipelines.registration.ICPConvergenceCriteria(max_iteration=2000))
     return mesh1_to_mesh2.transformation
 
 def get_partnet_to_sem_transform(shapenet_id, partnet_mesh):
